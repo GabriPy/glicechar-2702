@@ -1,0 +1,136 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+@layer base {
+  :root {
+    --bg: #f0f4f8;
+    --surface: #ffffff;
+    --surface-2: #f7fafc;
+    --border: #dde3ea;
+    --border-2: #c8d0db;
+
+    --text-primary: #1a202c;
+    --text-secondary: #4a5568;
+    --text-muted: #8a9ab0;
+
+    --blue: #2b6cb0;
+    --blue-l: #ebf4ff;
+    --green: #276749;
+    --green-l: #f0fff4;
+    --red: #c53030;
+    --red-l: #fff5f5;
+    --orange: #c05621;
+    --orange-l: #fffaf0;
+
+    --chart-green: #38a169;
+    --chart-red: #e53e3e;
+    --chart-orange: #dd6b20;
+  }
+
+  html {
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text-primary);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--bg);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-2);
+    border-radius: 3px;
+  }
+}
+
+@layer components {
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  }
+
+  .mono {
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.4s ease forwards;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.45s ease forwards;
+  }
+
+  .delay-1 {
+    animation-delay: 0.06s;
+    opacity: 0;
+  }
+
+  .delay-2 {
+    animation-delay: 0.12s;
+    opacity: 0;
+  }
+
+  .delay-3 {
+    animation-delay: 0.18s;
+    opacity: 0;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0
+  }
+
+  to {
+    opacity: 1
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px)
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0)
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg)
+  }
+}
