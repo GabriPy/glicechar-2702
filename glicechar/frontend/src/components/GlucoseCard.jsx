@@ -4,26 +4,71 @@ import {
   ArrowUpRight, ArrowDownRight, Minus
 } from 'lucide-react'
 
+/* -------------------------------------------------------
+   TREND DIRECTIONS (colori via CSS variables)
+------------------------------------------------------- */
 const DIRECTIONS = {
-  'DoubleUp': { Icon: ArrowUp, label: 'Salita rapida', color: 'var(--red)', double: true },
-  'SingleUp': { Icon: ArrowUp, label: 'In salita', color: 'var(--orange)', double: false },
-  'FortyFiveUp': { Icon: ArrowUpRight, label: 'Lieve salita', color: 'var(--orange)', double: false },
-  'Flat': { Icon: ArrowRight, label: 'Stabile', color: 'var(--green)', double: false },
-  'FortyFiveDown': { Icon: ArrowDownRight, label: 'Lieve discesa', color: 'var(--orange)', double: false },
-  'SingleDown': { Icon: ArrowDown, label: 'In discesa', color: 'var(--orange)', double: false },
-  'DoubleDown': { Icon: ArrowDown, label: 'Discesa rapida', color: 'var(--red)', double: true },
+  DoubleUp:      { Icon: ArrowUp,        label: 'Salita rapida',  color: 'var(--red)',    double: true  },
+  SingleUp:      { Icon: ArrowUp,        label: 'In salita',      color: 'var(--orange)', double: false },
+  FortyFiveUp:   { Icon: ArrowUpRight,   label: 'Lieve salita',   color: 'var(--orange)', double: false },
+  Flat:          { Icon: ArrowRight,     label: 'Stabile',        color: 'var(--green)',  double: false },
+  FortyFiveDown: { Icon: ArrowDownRight, label: 'Lieve discesa',  color: 'var(--orange)', double: false },
+  SingleDown:    { Icon: ArrowDown,      label: 'In discesa',     color: 'var(--orange)', double: false },
+  DoubleDown:    { Icon: ArrowDown,      label: 'Discesa rapida', color: 'var(--red)',    double: true  },
 }
 
-
+/* -------------------------------------------------------
+   STATUS GLICEMICO (background dinamici light/dark)
+------------------------------------------------------- */
 function getStatus(sgv) {
-  if (sgv < 54) return { label: 'IPOGLICEMIA GRAVE', color: 'var(--red)', bg: 'var(--bg-hypo-severe)', border: 'var(--red)', severe: true }
-  if (sgv < 70) return { label: 'IPOGLICEMIA', color: 'var(--red)', bg: 'var(--bg-hypo)', border: 'var(--red)', severe: false }
-  if (sgv > 250) return { label: 'IPERGLICEMIA GRAVE', color: 'var(--orange)', bg: 'var(--bg-hyper-severe)', border: 'var(--orange)', severe: true }
-  if (sgv > 180) return { label: 'IPERGLICEMIA', color: 'var(--orange)', bg: 'var(--bg-hyper)', border: 'var(--orange)', severe: false }
-  return { label: 'IN RANGE', color: 'var(--green)', bg: 'var(--bg-inrange)', border: 'var(--green)', severe: false }
+  if (sgv < 54)
+    return {
+      label: 'IPOGLICEMIA GRAVE',
+      color: 'var(--red)',
+      bg: 'var(--bg-hypo-severe)',
+      border: 'var(--red)',
+      severe: true
+    }
+
+  if (sgv < 70)
+    return {
+      label: 'IPOGLICEMIA',
+      color: 'var(--red)',
+      bg: 'var(--bg-hypo)',
+      border: 'var(--red)',
+      severe: false
+    }
+
+  if (sgv > 250)
+    return {
+      label: 'IPERGLICEMIA GRAVE',
+      color: 'var(--orange)',
+      bg: 'var(--bg-hyper-severe)',
+      border: 'var(--orange)',
+      severe: true
+    }
+
+  if (sgv > 180)
+    return {
+      label: 'IPERGLICEMIA',
+      color: 'var(--orange)',
+      bg: 'var(--bg-hyper)',
+      border: 'var(--orange)',
+      severe: false
+    }
+
+  return {
+    label: 'IN RANGE',
+    color: 'var(--green)',
+    bg: 'var(--bg-inrange)',
+    border: 'var(--green)',
+    severe: false
+  }
 }
 
-
+/* -------------------------------------------------------
+   TIME AGO
+------------------------------------------------------- */
 function timeAgo(ts) {
   const m = Math.floor((Date.now() - ts) / 60000)
   if (m < 1) return 'Adesso'
@@ -32,15 +77,18 @@ function timeAgo(ts) {
   return `${Math.floor(m / 60)}h fa`
 }
 
+/* -------------------------------------------------------
+   COMPONENTE PRINCIPALE
+------------------------------------------------------- */
 export default function GlucoseCard({ reading }) {
   if (!reading) return null
 
   const { sgv, direction, timestamp } = reading
   const status = getStatus(sgv)
-  const trend = DIRECTIONS[direction] || { Icon: Minus, label: 'N/D', color: '#8a9ab0', double: false }
+  const trend = DIRECTIONS[direction] || { Icon: Minus, label: 'N/D', color: 'var(--text-muted)', double: false }
   const { Icon } = trend
 
-  // Animazione valore quando cambia
+  /* Animazione valore */
   const prevValue = useRef(sgv)
   const [flash, setFlash] = useState(null)
 
@@ -56,20 +104,21 @@ export default function GlucoseCard({ reading }) {
 
   return (
     <div
-      className={`card p-4 flex-shrink-0 transition-all duration-300 ${status.severe ? 'shake' : ''
-        }`}
+      className={`card p-4 flex-shrink-0 transition-all duration-300 glucose-card ${
+        status.severe ? 'shake' : ''
+      }`}
       style={{
         borderLeft: `5px solid ${status.color}`,
         background: status.bg,
       }}
     >
-      <div className="label mb-2">Glicemia attuale</div>
+      <div className="label glucose-card-label mb-2">Glicemia attuale</div>
 
       {/* Valore + trend */}
       <div className="flex items-center justify-between">
         <div className="flex items-baseline gap-2">
           <span
-            className={`text-5xl font-bold mono leading-none transition-all duration-300 ${flash}`}
+            className={`text-5xl font-bold mono leading-none transition-all duration-300 glucose-card-value ${flash}`}
             style={{ color: status.color }}
           >
             {sgv}
@@ -77,7 +126,7 @@ export default function GlucoseCard({ reading }) {
           <span className="text-sm text-[var(--text-muted)]">mg/dL</span>
         </div>
 
-        <div className="flex flex-col items-center gap-0.5">
+        <div className="flex flex-col items-center gap-0.5 glucose-trend-icon">
           <div className="flex flex-col items-center" style={{ color: trend.color }}>
             {trend.double ? (
               <>
@@ -125,11 +174,11 @@ export default function GlucoseCard({ reading }) {
           animation: flashRed 0.45s ease-out;
         }
         @keyframes flashGreen {
-          0% { color: #16a34a; transform: scale(1.05); }
+          0% { color: var(--green); transform: scale(1.05); }
           100% { transform: scale(1); }
         }
         @keyframes flashRed {
-          0% { color: #dc2626; transform: scale(1.05); }
+          0% { color: var(--red); transform: scale(1.05); }
           100% { transform: scale(1); }
         }
         .shake {

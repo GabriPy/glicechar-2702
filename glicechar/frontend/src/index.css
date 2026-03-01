@@ -274,3 +274,70 @@
     transform: translateX(0);
   }
 }
+
+/* -------------------------------------------------------
+   COMPACT MODE (mobile < 420px)
+   Mostra solo: GlucoseCard, TIR, Grafico
+------------------------------------------------------- */
+
+/* Nascondi card secondarie */
+body.compact .stats-24h,
+body.compact .last-readings,
+body.compact .secondary-card {
+  display: none !important;
+}
+
+/* Mantieni visibili solo queste */
+body.compact .glucose-card,
+body.compact .tir-box,
+body.compact .chart-container {
+  display: block !important;
+}
+
+/* Riduci padding e spaziature */
+body.compact .card {
+  padding: 0.75rem !important;
+  border-radius: 10px;
+}
+
+/* GlucoseCard compact */
+body.compact .glucose-card-value {
+  font-size: 2.6rem !important;
+}
+
+body.compact .glucose-card-label {
+  font-size: 0.6rem !important;
+}
+
+body.compact .glucose-trend-icon svg {
+  width: 18px !important;
+  height: 18px !important;
+}
+
+/* Header più compatto */
+body.compact header {
+  padding: 0.5rem 0.75rem !important;
+}
+
+body.compact header .label {
+  font-size: 0.6rem !important;
+}
+
+/* TIR compact */
+body.compact .tir-box {
+  padding: 0.6rem !important;
+}
+
+body.compact .tir-box .text-base {
+  font-size: 0.9rem !important;
+}
+
+/* Grafico più fitto */
+body.compact .recharts-wrapper {
+  margin-left: -6px;
+  margin-right: -6px;
+}
+
+body.compact .recharts-cartesian-axis-tick text {
+  font-size: 9px !important;
+}

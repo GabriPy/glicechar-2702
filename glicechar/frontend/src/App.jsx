@@ -15,10 +15,12 @@ export default function App() {
   const [lastSync, setLastSync] = useState(null)
   const [countdown, setCountdown] = useState(REFRESH_MS / 1000)
   const [windowHours, setWindowHours] = useState(3)
+
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem("theme") || "light"
   })
 
+  /* THEME */
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme)
     localStorage.setItem("theme", theme)
@@ -27,6 +29,21 @@ export default function App() {
   const toggleTheme = () => {
     setTheme(t => (t === "light" ? "dark" : "light"))
   }
+
+  /* COMPACT MODE */
+  useEffect(() => {
+    const checkCompact = () => {
+      if (window.innerWidth < 420) {
+        document.body.classList.add("compact")
+      } else {
+        document.body.classList.remove("compact")
+      }
+    }
+
+    checkCompact()
+    window.addEventListener("resize", checkCompact)
+    return () => window.removeEventListener("resize", checkCompact)
+  }, [])
 
   const intervalRef = useRef(null)
   const countdownRef = useRef(null)
@@ -51,7 +68,7 @@ export default function App() {
       }
     } catch (e) {
       setError(e.message.includes('fetch')
-        ? 'Backend non raggiungibile � verifica che il server sia attivo.'
+        ? 'Backend non raggiungibile — verifica che il server sia attivo.'
         : e.message)
     } finally {
       setIsLoading(false)
@@ -92,7 +109,7 @@ export default function App() {
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-[var(--bg)]">
 
-      {/* -- Topbar -- */}
+      {/* Topbar */}
       <header className="flex-shrink-0 bg-[var(--surface)] border-b border-[var(--border)] px-4 sm:px-6 py-3 flex items-center justify-between gap-3 shadow-sm">
 
         {/* Logo */}
@@ -139,6 +156,7 @@ export default function App() {
             />
             <span className="hidden sm:inline">Aggiorna</span>
           </button>
+
           {/* Theme toggle */}
           <button
             onClick={toggleTheme}
@@ -166,8 +184,7 @@ export default function App() {
         </div>
       </header>
 
-
-      {/* -- Body -- */}
+      {/* Body */}
       <div className="flex-1 overflow-hidden p-3 sm:p-4">
 
         {/* Loading */}
@@ -189,7 +206,7 @@ export default function App() {
             <div className="font-semibold text-[var(--red)] mb-1">Errore di connessione</div>
             <div className="text-sm text-[var(--text-secondary)]">{error}</div>
             <button onClick={handleRefresh} className="mt-2 text-xs text-[var(--blue)] bg-transparent border-none cursor-pointer p-0 font-semibold">
-              Riprova &rarr;
+              Riprova →
             </button>
           </div>
         )}
@@ -197,21 +214,24 @@ export default function App() {
         {/* Nessun dato */}
         {!isLoading && !error && readings.length === 0 && (
           <div className="h-full card flex items-center justify-center">
-            <div className="text-[var(--text-muted)] text-sm">In attesa di dati da Nightscout&hellip;</div>
+            <div className="text-[var(--text-muted)] text-sm">In attesa di dati da Nightscout…</div>
           </div>
         )}
 
-        {/* -- Layout dati -- */}
+        {/* Layout dati */}
         {!isLoading && !error && readings.length > 0 && (
           <div className="h-full grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-3">
 
             {/* Colonna sinistra */}
             <div className="flex flex-col gap-3 overflow-auto lg:overflow-hidden">
 
-              <GlucoseCard reading={latest} />
+              {/* GlucoseCard — SEMPRE visibile */}
+              <div className="glucose-card">
+                <GlucoseCard reading={latest} />
+              </div>
 
-              {/* Stats 24h */}
-              <div className="card p-4 flex flex-col gap-3 flex-shrink-0">
+              {/* Stats 24h — NASCOSTA su mobile */}
+              <div className="card p-4 flex flex-col gap-3 flex-shrink-0 stats-24h">
                 <div className="label">Statistiche 24 ore</div>
 
                 <div className="grid grid-cols-2 gap-2">
@@ -238,10 +258,9 @@ export default function App() {
                 </div>
               </div>
 
-
-              {/* TIR */}
+              {/* TIR — SEMPRE visibile */}
               {stats && (
-                <div className="card p-4 flex flex-col gap-3 flex-shrink-0">
+                <div className="card p-4 flex flex-col gap-3 flex-shrink-0 tir-box">
                   <div className="flex items-center justify-between">
                     <div className="label">Time In Range 24h</div>
                     <span
@@ -314,8 +333,8 @@ export default function App() {
               )}
             </div>
 
-            {/* Colonna destra: grafico */}
-            <div className="overflow-hidden min-h-0">
+            {/* Colonna destra: grafico — SEMPRE visibile */}
+            <div className="overflow-hidden min-h-0 chart-container">
               <GlucoseChart
                 data={readings}
                 windowHours={windowHours}
