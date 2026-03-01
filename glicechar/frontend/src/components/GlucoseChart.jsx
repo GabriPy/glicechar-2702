@@ -69,9 +69,19 @@ function CustomTooltip({ active, payload }) {
 }
 
 export default function GlucoseChart({ data, windowHours, onWindowChange, lastSync }) {
+
+  // 🔥 FIX PRINCIPALE: normalizzazione dati
   const chartData = useMemo(() => {
     if (!data?.length) return []
-    return data.map(d => ({ ...d, time: fmtTime(d.timestamp) }))
+
+    return data
+      .filter(d => d.sgv != null) // niente null/undefined
+      .map(d => ({
+        ...d,
+        sgv: Number(d.sgv),        // 🔥 conversione fondamentale
+        timestamp: Number(d.timestamp),
+        time: fmtTime(d.timestamp)
+      }))
   }, [data])
 
   const sgvValues = chartData.map(d => d.sgv)
@@ -146,7 +156,7 @@ export default function GlucoseChart({ data, windowHours, onWindowChange, lastSy
       </div>
 
       {/* Grafico */}
-      <div className="flex-1 min-h-0 px-2 py-3">
+      <div className="flex-1 min-h-[260px] px-2 py-3">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={chartData} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
             <defs>
