@@ -1,26 +1,28 @@
-import React from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import {
   ArrowUp, ArrowDown, ArrowRight,
   ArrowUpRight, ArrowDownRight, Minus
 } from 'lucide-react'
 
 const DIRECTIONS = {
-  'DoubleUp':      { Icon: ArrowUp,        label: 'Salita rapida',  color: '#e53e3e', double: true  },
-  'SingleUp':      { Icon: ArrowUp,        label: 'In salita',      color: '#dd6b20', double: false },
-  'FortyFiveUp':   { Icon: ArrowUpRight,   label: 'Lieve salita',   color: '#d69e2e', double: false },
-  'Flat':          { Icon: ArrowRight,     label: 'Stabile',        color: '#38a169', double: false },
-  'FortyFiveDown': { Icon: ArrowDownRight, label: 'Lieve discesa',  color: '#d69e2e', double: false },
-  'SingleDown':    { Icon: ArrowDown,      label: 'In discesa',     color: '#dd6b20', double: false },
-  'DoubleDown':    { Icon: ArrowDown,      label: 'Discesa rapida', color: '#e53e3e', double: true  },
+  'DoubleUp': { Icon: ArrowUp, label: 'Salita rapida', color: 'var(--red)', double: true },
+  'SingleUp': { Icon: ArrowUp, label: 'In salita', color: 'var(--orange)', double: false },
+  'FortyFiveUp': { Icon: ArrowUpRight, label: 'Lieve salita', color: 'var(--orange)', double: false },
+  'Flat': { Icon: ArrowRight, label: 'Stabile', color: 'var(--green)', double: false },
+  'FortyFiveDown': { Icon: ArrowDownRight, label: 'Lieve discesa', color: 'var(--orange)', double: false },
+  'SingleDown': { Icon: ArrowDown, label: 'In discesa', color: 'var(--orange)', double: false },
+  'DoubleDown': { Icon: ArrowDown, label: 'Discesa rapida', color: 'var(--red)', double: true },
 }
 
+
 function getStatus(sgv) {
-  if (sgv < 54)  return { label: 'IPOGLICEMIA GRAVE', color: '#e53e3e', bg: '#fff5f5', border: '#fed7d7' }
-  if (sgv < 70)  return { label: 'IPOGLICEMIA',       color: '#e53e3e', bg: '#fff5f5', border: '#fed7d7' }
-  if (sgv > 250) return { label: 'IPERGLICEMIA GRAVE',color: '#c05621', bg: '#fffaf0', border: '#fbd38d' }
-  if (sgv > 180) return { label: 'IPERGLICEMIA',      color: '#dd6b20', bg: '#fffaf0', border: '#fbd38d' }
-  return               { label: 'IN RANGE',           color: '#276749', bg: '#f0fff4', border: '#9ae6b4' }
+  if (sgv < 54) return { label: 'IPOGLICEMIA GRAVE', color: 'var(--red)', bg: 'var(--bg-hypo-severe)', border: 'var(--red)', severe: true }
+  if (sgv < 70) return { label: 'IPOGLICEMIA', color: 'var(--red)', bg: 'var(--bg-hypo)', border: 'var(--red)', severe: false }
+  if (sgv > 250) return { label: 'IPERGLICEMIA GRAVE', color: 'var(--orange)', bg: 'var(--bg-hyper-severe)', border: 'var(--orange)', severe: true }
+  if (sgv > 180) return { label: 'IPERGLICEMIA', color: 'var(--orange)', bg: 'var(--bg-hyper)', border: 'var(--orange)', severe: false }
+  return { label: 'IN RANGE', color: 'var(--green)', bg: 'var(--bg-inrange)', border: 'var(--green)', severe: false }
 }
+
 
 function timeAgo(ts) {
   const m = Math.floor((Date.now() - ts) / 60000)
@@ -32,19 +34,44 @@ function timeAgo(ts) {
 
 export default function GlucoseCard({ reading }) {
   if (!reading) return null
+
   const { sgv, direction, timestamp } = reading
   const status = getStatus(sgv)
-  const trend  = DIRECTIONS[direction] || { Icon: Minus, label: 'N/D', color: '#8a9ab0', double: false }
+  const trend = DIRECTIONS[direction] || { Icon: Minus, label: 'N/D', color: '#8a9ab0', double: false }
   const { Icon } = trend
 
+  // Animazione valore quando cambia
+  const prevValue = useRef(sgv)
+  const [flash, setFlash] = useState(null)
+
+  useEffect(() => {
+    if (prevValue.current !== sgv) {
+      const improved = sgv > prevValue.current
+      setFlash(improved ? 'flash-green' : 'flash-red')
+      prevValue.current = sgv
+      const t = setTimeout(() => setFlash(null), 450)
+      return () => clearTimeout(t)
+    }
+  }, [sgv])
+
   return (
-    <div className="card p-4 flex-shrink-0" style={{ borderLeft: `4px solid ${status.color}` }}>
+    <div
+      className={`card p-4 flex-shrink-0 transition-all duration-300 ${status.severe ? 'shake' : ''
+        }`}
+      style={{
+        borderLeft: `5px solid ${status.color}`,
+        background: status.bg,
+      }}
+    >
       <div className="label mb-2">Glicemia attuale</div>
 
       {/* Valore + trend */}
       <div className="flex items-center justify-between">
         <div className="flex items-baseline gap-2">
-          <span className="text-5xl font-bold mono leading-none" style={{ color: status.color }}>
+          <span
+            className={`text-5xl font-bold mono leading-none transition-all duration-300 ${flash}`}
+            style={{ color: status.color }}
+          >
             {sgv}
           </span>
           <span className="text-sm text-[var(--text-muted)]">mg/dL</span>
@@ -52,10 +79,14 @@ export default function GlucoseCard({ reading }) {
 
         <div className="flex flex-col items-center gap-0.5">
           <div className="flex flex-col items-center" style={{ color: trend.color }}>
-            {trend.double
-              ? <><Icon size={20} strokeWidth={2.5} /><Icon size={20} strokeWidth={2.5} className="-mt-2" /></>
-              : <Icon size={24} strokeWidth={2.5} />
-            }
+            {trend.double ? (
+              <>
+                <Icon size={22} strokeWidth={2.5} />
+                <Icon size={22} strokeWidth={2.5} className="-mt-2" />
+              </>
+            ) : (
+              <Icon size={26} strokeWidth={2.5} />
+            )}
           </div>
           <span className="text-[0.68rem] text-[var(--text-secondary)]">{trend.label}</span>
         </div>
@@ -64,18 +95,54 @@ export default function GlucoseCard({ reading }) {
       {/* Badge + orario */}
       <div className="flex items-center justify-between mt-3">
         <span
-          className="text-[0.68rem] font-bold tracking-widest px-2.5 py-1 rounded"
-          style={{ background: status.bg, color: status.color, border: `1px solid ${status.border}` }}
+          className="text-[0.68rem] font-bold tracking-widest px-2.5 py-1 rounded-md border"
+          style={{
+            background: status.bg,
+            color: status.color,
+            borderColor: status.border,
+          }}
         >
           {status.label}
         </span>
+
         <div className="text-right">
           <div className="text-[0.72rem] text-[var(--text-muted)]">{timeAgo(timestamp)}</div>
           <div className="mono text-[0.72rem] text-[var(--text-secondary)]">
-            {new Date(timestamp).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+            {new Date(timestamp).toLocaleTimeString('it-IT', {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
           </div>
         </div>
       </div>
+
+      {/* Animazioni CSS */}
+      <style>{`
+        .flash-green {
+          animation: flashGreen 0.45s ease-out;
+        }
+        .flash-red {
+          animation: flashRed 0.45s ease-out;
+        }
+        @keyframes flashGreen {
+          0% { color: #16a34a; transform: scale(1.05); }
+          100% { transform: scale(1); }
+        }
+        @keyframes flashRed {
+          0% { color: #dc2626; transform: scale(1.05); }
+          100% { transform: scale(1); }
+        }
+        .shake {
+          animation: shakeAnim 0.35s ease-in-out;
+        }
+        @keyframes shakeAnim {
+          0% { transform: translateX(0); }
+          25% { transform: translateX(-3px); }
+          50% { transform: translateX(3px); }
+          75% { transform: translateX(-2px); }
+          100% { transform: translateX(0); }
+        }
+      `}</style>
     </div>
   )
 }

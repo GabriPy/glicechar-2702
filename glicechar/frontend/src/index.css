@@ -4,31 +4,106 @@
 @tailwind components;
 @tailwind utilities;
 
-
+/* -------------------------------------------------------
+   PALETTE + BASE
+------------------------------------------------------- */
 @layer base {
   :root {
-    --bg: #f0f4f8;
+    /* LIGHT MODE */
+    --bg: #eef2f6;
     --surface: #ffffff;
-    --surface-2: #f7fafc;
-    --border: #dde3ea;
-    --border-2: #c8d0db;
+    --surface-2: #f8fafc;
 
-    --text-primary: #1a202c;
-    --text-secondary: #4a5568;
+    --border: #d7dee7;
+    --border-2: #c4ccd8;
+
+    --text-primary: #1e293b;
+    --text-secondary: #475569;
     --text-muted: #8a9ab0;
 
-    --blue: #2b6cb0;
-    --blue-l: #ebf4ff;
-    --green: #276749;
-    --green-l: #f0fff4;
-    --red: #c53030;
-    --red-l: #fff5f5;
-    --orange: #c05621;
-    --orange-l: #fffaf0;
+    --blue: #2563eb;
+    --blue-l: #dbeafe;
 
-    --chart-green: #38a169;
-    --chart-red: #e53e3e;
-    --chart-orange: #dd6b20;
+    --green: #16a34a;
+    --green-l: #dcfce7;
+
+    --red: #dc2626;
+    --red-l: #fee2e2;
+
+    --orange: #f97316;
+    --orange-l: #ffedd5;
+
+    --chart-green: #16a34a;
+    --chart-red: #dc2626;
+    --chart-orange: #f97316;
+
+    /* Glucose backgrounds (LIGHT) */
+    --bg-hypo: #fff5f5;
+    --bg-hypo-severe: #ffe5e5;
+    --bg-hyper: #fffaf0;
+    --bg-hyper-severe: #ffe8d9;
+    --bg-inrange: #f0fff4;
+
+    /* TIR backgrounds (light) */
+    --tir-low-bg: #fff5f5;
+    --tir-low-color: var(--red);
+
+    --tir-inrange-bg: #f0fff4;
+    --tir-inrange-color: var(--green);
+
+    --tir-high-bg: #fffaf0;
+    --tir-high-color: var(--orange);
+
+  }
+
+  /* -------------------------------------------------------
+     DARK MODE
+  ------------------------------------------------------- */
+  html[data-theme="dark"] {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --surface-2: #273449;
+
+    --border: #334155;
+    --border-2: #475569;
+
+    --text-primary: #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --text-muted: #94a3b8;
+
+    --blue: #60a5fa;
+    --blue-l: #1e3a8a;
+
+    --green: #4ade80;
+    --green-l: #064e3b;
+
+    --red: #f87171;
+    --red-l: #7f1d1d;
+
+    --orange: #fb923c;
+    --orange-l: #7c2d12;
+
+    --chart-green: #4ade80;
+    --chart-red: #f87171;
+    --chart-orange: #fb923c;
+
+    /* Glucose backgrounds (DARK) */
+    --bg-hypo: #3b0d0d;
+    --bg-hypo-severe: #4a0f0f;
+    --bg-hyper: #3a2410;
+    --bg-hyper-severe: #4a2c12;
+    --bg-inrange: #0f2f1a;
+
+    /* TIR backgrounds (dark) */
+    --tir-low-bg: #3b0d0d;
+    --tir-low-color: var(--red);
+
+    --tir-inrange-bg: #0f2f1a;
+    --tir-inrange-color: var(--green);
+
+    --tir-high-bg: #3a2410;
+    --tir-high-color: var(--orange);
+
   }
 
   html {
@@ -40,6 +115,18 @@
     color: var(--text-primary);
     min-height: 100vh;
     -webkit-font-smoothing: antialiased;
+  }
+
+  /* Smooth theme transition */
+  html,
+  body,
+  .card,
+  [data-theme] {
+    transition:
+      background-color 0.35s ease,
+      color 0.35s ease,
+      border-color 0.35s ease,
+      box-shadow 0.35s ease;
   }
 
   * {
@@ -61,12 +148,18 @@
   }
 }
 
+/* -------------------------------------------------------
+   COMPONENTS
+------------------------------------------------------- */
 @layer components {
   .card {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+    border-radius: 14px;
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.04),
+      0 2px 6px rgba(0, 0, 0, 0.04);
+    transition: background 0.25s ease, border-color 0.25s ease;
   }
 
   .mono {
@@ -76,12 +169,15 @@
   .label {
     font-size: 0.68rem;
     font-weight: 600;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--text-muted);
   }
 }
 
+/* -------------------------------------------------------
+   UTILITIES + ANIMATIONS
+------------------------------------------------------- */
 @layer utilities {
   .animate-fade-in {
     animation: fadeIn 0.4s ease forwards;
@@ -132,5 +228,49 @@
 @keyframes spin {
   to {
     transform: rotate(360deg)
+  }
+}
+
+@keyframes flashGreen {
+  0% {
+    color: #16a34a;
+    transform: scale(1.05);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes flashRed {
+  0% {
+    color: #dc2626;
+    transform: scale(1.05);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes shakeAnim {
+  0% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-3px);
+  }
+
+  50% {
+    transform: translateX(3px);
+  }
+
+  75% {
+    transform: translateX(-2px);
+  }
+
+  100% {
+    transform: translateX(0);
   }
 }

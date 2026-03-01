@@ -3,20 +3,33 @@ import { RefreshCw, Clock, Wifi, WifiOff, Activity } from 'lucide-react'
 import GlucoseCard from './components/GlucoseCard'
 import GlucoseChart from './components/GlucoseChart'
 
-const API_BASE   = '/api'
+const API_BASE = '/api'
 const REFRESH_MS = 60000
 
 export default function App() {
-  const [readings,     setReadings]     = useState([])
-  const [stats,        setStats]        = useState(null)
-  const [isLoading,    setIsLoading]    = useState(true)
+  const [readings, setReadings] = useState([])
+  const [stats, setStats] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const [error,        setError]        = useState(null)
-  const [lastSync,     setLastSync]     = useState(null)
-  const [countdown,    setCountdown]    = useState(REFRESH_MS / 1000)
-  const [windowHours,  setWindowHours]  = useState(3)
-  const intervalRef    = useRef(null)
-  const countdownRef   = useRef(null)
+  const [error, setError] = useState(null)
+  const [lastSync, setLastSync] = useState(null)
+  const [countdown, setCountdown] = useState(REFRESH_MS / 1000)
+  const [windowHours, setWindowHours] = useState(3)
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem("theme") || "light"
+  })
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme)
+    localStorage.setItem("theme", theme)
+  }, [theme])
+
+  const toggleTheme = () => {
+    setTheme(t => (t === "light" ? "dark" : "light"))
+  }
+
+  const intervalRef = useRef(null)
+  const countdownRef = useRef(null)
   const windowHoursRef = useRef(3)
 
   const fetchAll = useCallback(async (first = false) => {
@@ -38,7 +51,7 @@ export default function App() {
       }
     } catch (e) {
       setError(e.message.includes('fetch')
-        ? 'Backend non raggiungibile — verifica che il server sia attivo.'
+        ? 'Backend non raggiungibile ï¿½ verifica che il server sia attivo.'
         : e.message)
     } finally {
       setIsLoading(false)
@@ -73,53 +86,51 @@ export default function App() {
     return () => { clearInterval(intervalRef.current); clearInterval(countdownRef.current) }
   }, [fetchAll, resetCountdown])
 
-  const latest    = readings.length ? readings[readings.length - 1] : null
+  const latest = readings.length ? readings[readings.length - 1] : null
   const connected = !error && !isLoading
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-[var(--bg)]">
 
       {/* -- Topbar -- */}
-      <header className="flex-shrink-0 bg-[var(--surface)] border-b border-[var(--border)] px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+      <header className="flex-shrink-0 bg-[var(--surface)] border-b border-[var(--border)] px-4 sm:px-6 py-3 flex items-center justify-between gap-3 shadow-sm">
 
         {/* Logo */}
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-[var(--blue-l)] border border-[#bee3f8] flex items-center justify-center flex-shrink-0">
-            <Activity size={15} color="#2b6cb0" strokeWidth={2.5} />
+          <div className="w-9 h-9 rounded-lg bg-[var(--blue-l)] border border-[#bee3f8] flex items-center justify-center">
+            <Activity size={16} color="#2b6cb0" strokeWidth={2.5} />
           </div>
           <div>
-            <div className="font-bold text-sm text-[var(--text-primary)]">GlucoScope</div>
+            <div className="font-bold text-sm text-[var(--text-primary)] tracking-wide">GlucoScope</div>
             <div className="text-[0.65rem] text-[var(--text-muted)] hidden sm:block">Monitoraggio continuo CGM</div>
           </div>
         </div>
 
-        {/* Destra */}
+        {/* Right side */}
         <div className="flex items-center gap-2">
 
-          {/* Stato connessione */}
-          <div className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[0.72rem] font-medium ${
-            connected
-              ? 'bg-[#f0fff4] border-[#9ae6b4] text-[#276749]'
-              : 'bg-[#fff5f5] border-[#fed7d7] text-[#c53030]'
-          }`}>
-            {connected
-              ? <Wifi size={12} strokeWidth={2.5} />
-              : <WifiOff size={12} strokeWidth={2.5} />
-            }
+          {/* Connection status */}
+          <div className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[0.72rem] font-medium transition-all ${connected
+            ? 'bg-[#f0fff4] border-[#9ae6b4] text-[#276749]'
+            : 'bg-[#fff5f5] border-[#fed7d7] text-[#c53030]'
+            }`}>
+            {connected ? <Wifi size={12} strokeWidth={2.5} /> : <WifiOff size={12} strokeWidth={2.5} />}
             {connected ? 'Connesso' : 'Disconnesso'}
           </div>
 
           {/* Countdown */}
           <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-xs text-[var(--text-muted)]">
             <Clock size={11} strokeWidth={2} />
-            Sync in <span className="text-[var(--blue)] font-semibold ml-0.5">{countdown}s</span>
+            <span className="flex items-center gap-1">
+              Sync in <span className="text-[var(--blue)] font-semibold">{countdown}s</span>
+            </span>
           </div>
 
-          {/* Aggiorna */}
+          {/* Refresh */}
           <button
             onClick={handleRefresh}
             disabled={isLoading || isRefreshing}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--blue)] text-white rounded-lg text-xs font-semibold border-none cursor-pointer disabled:opacity-60 transition-opacity"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--blue)] text-white rounded-lg text-xs font-semibold border-none cursor-pointer disabled:opacity-60 transition-all hover:brightness-110"
           >
             <RefreshCw
               size={12}
@@ -128,8 +139,33 @@ export default function App() {
             />
             <span className="hidden sm:inline">Aggiorna</span>
           </button>
+          {/* Theme toggle */}
+          <button
+            onClick={toggleTheme}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-xs text-[var(--text-primary)] hover:brightness-110 transition-all"
+          >
+            {theme === "light" ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+              </svg>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+              </svg>
+            )}
+          </button>
+
         </div>
       </header>
+
 
       {/* -- Body -- */}
       <div className="flex-1 overflow-hidden p-3 sm:p-4">
@@ -177,23 +213,24 @@ export default function App() {
               {/* Stats 24h */}
               <div className="card p-4 flex flex-col gap-3 flex-shrink-0">
                 <div className="label">Statistiche 24 ore</div>
+
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { label: 'Media',   value: stats?.avg_sgv,        unit: 'mg/dL', color: 'text-[var(--blue)]' },
-                    { label: 'Letture', value: stats?.total_readings, unit: '',      color: 'text-[var(--text-primary)]' },
+                    { label: 'Media', value: stats?.avg_sgv, unit: 'mg/dL', color: 'text-[var(--blue)]' },
+                    { label: 'Letture', value: stats?.total_readings, unit: '', color: 'text-[var(--text-primary)]' },
                     {
                       label: 'Minimo', value: stats?.min_sgv, unit: 'mg/dL',
-                      color: stats?.min_sgv < 70 ? 'text-[var(--red)]' : 'text-[var(--text-primary)]',
+                      color: stats?.min_sgv < 70 ? 'text-[#dc2626]' : 'text-[var(--text-primary)]',
                     },
                     {
                       label: 'Massimo', value: stats?.max_sgv, unit: 'mg/dL',
-                      color: stats?.max_sgv > 180 ? 'text-[var(--orange)]' : 'text-[var(--text-primary)]',
+                      color: stats?.max_sgv > 180 ? 'text-[#dc2626]' : 'text-[var(--text-primary)]',
                     },
                   ].map(s => (
-                    <div key={s.label} className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg p-3">
+                    <div key={s.label} className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg p-3 shadow-sm">
                       <div className="label mb-1">{s.label}</div>
                       <div className={`text-xl font-bold mono leading-none ${s.color}`}>
-                        {s.value ?? '—'}
+                        {s.value ?? 'â€”'}
                         {s.unit && <span className="text-xs font-normal text-[var(--text-muted)] ml-1">{s.unit}</span>}
                       </div>
                     </div>
@@ -201,37 +238,77 @@ export default function App() {
                 </div>
               </div>
 
+
               {/* TIR */}
               {stats && (
-                <div className="card p-4 flex flex-col gap-2 flex-shrink-0">
+                <div className="card p-4 flex flex-col gap-3 flex-shrink-0">
                   <div className="flex items-center justify-between">
                     <div className="label">Time In Range 24h</div>
-                    <span className={`text-xl font-bold mono ${
-                      stats.time_in_range_percent >= 70 ? 'text-[var(--green)]'
-                      : stats.time_in_range_percent >= 50 ? 'text-[var(--orange)]'
-                      : 'text-[var(--red)]'
-                    }`}>
-                      {stats.time_in_range_percent ?? '—'}%
+                    <span
+                      className="text-xl font-bold mono"
+                      style={{
+                        color:
+                          stats.time_in_range_percent >= 70
+                            ? 'var(--green)'
+                            : stats.time_in_range_percent >= 50
+                              ? 'var(--orange)'
+                              : 'var(--red)'
+                      }}
+                    >
+                      {stats.time_in_range_percent ?? 'â€”'}%
                     </span>
                   </div>
+
+                  {/* Barra TIR */}
                   <div className="h-2 bg-[var(--border)] rounded-full overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-1000" style={{
-                      width: `${stats.time_in_range_percent ?? 0}%`,
-                      background: stats.time_in_range_percent >= 70 ? '#38a169'
-                        : stats.time_in_range_percent >= 50 ? '#dd6b20' : '#e53e3e',
-                    }} />
+                    <div
+                      className="h-full rounded-full transition-all duration-1000"
+                      style={{
+                        width: `${stats.time_in_range_percent ?? 0}%`,
+                        background:
+                          stats.time_in_range_percent >= 70
+                            ? 'var(--green)'
+                            : stats.time_in_range_percent >= 50
+                              ? 'var(--orange)'
+                              : 'var(--red)'
+                      }}
+                    />
                   </div>
+
+                  {/* Box basso / ok / alto */}
                   <div className="grid grid-cols-3 gap-1.5 text-center">
-                    {[
-                      { label: 'Basso', val: stats.low_count,      color: '#e53e3e', bg: '#fff5f5' },
-                      { label: 'OK',    val: stats.in_range_count, color: '#276749', bg: '#f0fff4' },
-                      { label: 'Alto',  val: stats.high_count,     color: '#c05621', bg: '#fffaf0' },
-                    ].map(s => (
-                      <div key={s.label} className="rounded-md py-1.5" style={{ background: s.bg }}>
-                        <div className="text-base font-bold mono" style={{ color: s.color }}>{s.val ?? 0}</div>
-                        <div className="text-[0.65rem] text-[var(--text-muted)]">{s.label}</div>
-                      </div>
-                    ))}
+                    <div
+                      className="rounded-md py-1.5 shadow-sm"
+                      style={{
+                        background: 'var(--tir-low-bg)',
+                        color: 'var(--tir-low-color)'
+                      }}
+                    >
+                      <div className="text-base font-bold mono">{stats.low_count ?? 0}</div>
+                      <div className="text-[0.65rem] text-[var(--text-muted)]">Basso</div>
+                    </div>
+
+                    <div
+                      className="rounded-md py-1.5 shadow-sm"
+                      style={{
+                        background: 'var(--tir-inrange-bg)',
+                        color: 'var(--tir-inrange-color)'
+                      }}
+                    >
+                      <div className="text-base font-bold mono">{stats.in_range_count ?? 0}</div>
+                      <div className="text-[0.65rem] text-[var(--text-muted)]">OK</div>
+                    </div>
+
+                    <div
+                      className="rounded-md py-1.5 shadow-sm"
+                      style={{
+                        background: 'var(--tir-high-bg)',
+                        color: 'var(--tir-high-color)'
+                      }}
+                    >
+                      <div className="text-base font-bold mono">{stats.high_count ?? 0}</div>
+                      <div className="text-[0.65rem] text-[var(--text-muted)]">Alto</div>
+                    </div>
                   </div>
                 </div>
               )}
