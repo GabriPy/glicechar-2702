@@ -1,142 +1,139 @@
 /**
  * ============================================================
- * nightscout.js - Modulo sincronizzazione dati Nightscout
+ * nightscout.js - Sincronizzazione dati Nightscout (migliorata)
  * ============================================================
- * Questo modulo è responsabile di:
- * 1. Chiamare l'API Nightscout (Gluroo) con autenticazione
- * 2. Validare i dati ricevuti
- * 3. Inserire nel database solo i record NON già presenti
- *    (evitando duplicati tramite il campo UNIQUE: timestamp)
+ * Miglioramenti:
+ * - Logging strutturato con Pino
+ * - Retry con backoff esponenziale
+ * - Timeout ridotto e controllato
+ * - Validazione più robusta
+ * - Gestione errori MySQL migliorata
  * ============================================================
  */
 
-const axios = require('axios');
-const db = require('./db');
+const axios = require("axios");
+const db = require("./db");
+const logger = require("./logger");
+
+const MAX_RETRIES = 3;
+
+/**
+ * fetchNightscoutData()
+ * ---------------------
+ * Effettua la chiamata a Nightscout con retry + backoff.
+ */
+async function fetchNightscoutData(url, retries = 0) {
+  try {
+    const response = await axios.get(url, {
+      headers: {
+        "api-secret": process.env.NIGHTSCOUT_API_SECRET,
+        "Accept": "application/json"
+      },
+      timeout: 8000
+    });
+
+    return response.data;
+
+  } catch (err) {
+    if (retries < MAX_RETRIES) {
+      const delay = 1000 * Math.pow(2, retries);
+      logger.warn({
+        msg: "Nightscout non risponde, nuovo tentativo...",
+        retry: retries + 1,
+        wait_ms: delay,
+        error: err.message
+      });
+
+      await new Promise(res => setTimeout(res, delay));
+      return fetchNightscoutData(url, retries + 1);
+    }
+
+    logger.error({
+      msg: "Nightscout API fallita definitivamente",
+      error: err.message,
+      code: err.code
+    });
+
+    return null;
+  }
+}
 
 /**
  * syncNightscout()
  * ----------------
  * Funzione principale di sincronizzazione.
- * Viene chiamata:
- * - Una volta all'avvio del server (boot)
- * - Ogni 60 secondi dal cron job
- *
- * Flusso:
- *   Nightscout API → validazione → INSERT IGNORE MySQL
- *
- * @returns {Promise<{inserted: number, skipped: number}>}
  */
 async function syncNightscout() {
   let inserted = 0;
   let skipped = 0;
 
-  try {
-    // ── 1. Chiamata API Nightscout ────────────────────────────
-    /**
-     * Nightscout richiede autenticazione tramite header "api-secret".
-     * Il valore è il token SHA1 configurato in .env.
-     * IMPORTANTE: questo token non deve MAI essere esposto al frontend.
-     */
-    const response = await axios.get(process.env.NIGHTSCOUT_URL, {
-      headers: {
-        'api-secret': process.env.NIGHTSCOUT_API_SECRET,
-        'Accept': 'application/json',
-      },
-      timeout: 15000, // 15 secondi di timeout
-    });
+  logger.info("🔄 Avvio sincronizzazione Nightscout...");
 
-    const entries = response.data;
+  const entries = await fetchNightscoutData(process.env.NIGHTSCOUT_URL);
 
-    // ── 2. Validazione risposta ───────────────────────────────
-    if (!Array.isArray(entries)) {
-      console.warn('⚠️  Risposta Nightscout non è un array:', typeof entries);
-      return { inserted, skipped };
-    }
-
-    console.log(`📥 Ricevuti ${entries.length} record da Nightscout`);
-
-    // ── 3. Inserimento in MySQL ───────────────────────────────
-    for (const entry of entries) {
-      // Valida che il record abbia i campi minimi necessari
-      if (!isValidEntry(entry)) {
-        console.warn('⚠️  Record non valido, saltato:', JSON.stringify(entry));
-        skipped++;
-        continue;
-      }
-
-      try {
-        /**
-         * INSERT IGNORE: se il timestamp è già presente (UNIQUE constraint),
-         * MySQL ignora silenziosamente il duplicato senza generare errore.
-         * Questo garantisce l'idempotenza: possiamo chiamare questa funzione
-         * quante volte vogliamo senza creare duplicati.
-         */
-        const result = await db.query(
-          `INSERT IGNORE INTO glucose_readings (sgv, direction, timestamp)
-           VALUES (?, ?, ?)`,
-          [
-            entry.sgv,                          // Valore glicemia in mg/dL
-            entry.direction || null,             // Direzione trend (es. "Flat", "SingleUp")
-            entry.date || entry.dateString       // Timestamp in millisecondi (epoch)
-              ? (entry.date || new Date(entry.dateString).getTime())
-              : null,
-          ]
-        );
-
-        // affectedRows = 1 → inserito, 0 → duplicato ignorato
-        if (result.affectedRows > 0) {
-          inserted++;
-        } else {
-          skipped++;
-        }
-
-      } catch (dbError) {
-        // Logga l'errore ma continua con gli altri record
-        console.error('❌ Errore inserimento record:', dbError.message);
-        skipped++;
-      }
-    }
-
-    console.log(`✅ Sync completato: ${inserted} inseriti, ${skipped} saltati/duplicati`);
-    return { inserted, skipped };
-
-  } catch (error) {
-    // ── Gestione errori di rete/autenticazione ────────────────
-    if (error.response) {
-      // Il server Nightscout ha risposto con un codice di errore HTTP
-      console.error(`❌ Errore Nightscout HTTP ${error.response.status}:`, error.response.data);
-    } else if (error.request) {
-      // Nessuna risposta ricevuta (timeout, DNS, rete)
-      console.error('❌ Nessuna risposta da Nightscout (timeout o rete)');
-    } else {
-      // Errore generico
-      console.error('❌ Errore sincronizzazione:', error.message);
-    }
-
+  if (!entries) {
+    logger.error("❌ Nessun dato ricevuto da Nightscout");
     return { inserted, skipped };
   }
+
+  if (!Array.isArray(entries)) {
+    logger.error({
+      msg: "Risposta Nightscout non valida",
+      type: typeof entries
+    });
+    return { inserted, skipped };
+  }
+
+  logger.info(`📥 Ricevuti ${entries.length} record da Nightscout`);
+
+  for (const entry of entries) {
+    if (!isValidEntry(entry)) {
+      logger.warn({ msg: "Record non valido, saltato", entry });
+      skipped++;
+      continue;
+    }
+
+    try {
+      const timestamp =
+        entry.date ||
+        (entry.dateString ? new Date(entry.dateString).getTime() : null);
+
+      const result = await db.query(
+        `INSERT IGNORE INTO glucose_readings (sgv, direction, timestamp)
+         VALUES (?, ?, ?)`,
+        [entry.sgv, entry.direction || null, timestamp]
+      );
+
+      if (result.affectedRows > 0) inserted++;
+      else skipped++;
+
+    } catch (dbError) {
+      logger.error({
+        msg: "Errore inserimento MySQL",
+        error: dbError.message,
+        entry
+      });
+      skipped++;
+    }
+  }
+
+  logger.info(`✅ Sync completato: ${inserted} inseriti, ${skipped} saltati`);
+  return { inserted, skipped };
 }
 
 /**
- * isValidEntry(entry)
- * -------------------
- * Verifica che un record Nightscout abbia i dati minimi validi.
- *
- * @param {Object} entry - Record grezzo da Nightscout
- * @returns {boolean}
+ * isValidEntry()
+ * --------------
+ * Verifica che un record Nightscout sia valido.
  */
 function isValidEntry(entry) {
-  if (!entry || typeof entry !== 'object') return false;
+  if (!entry || typeof entry !== "object") return false;
+  if (typeof entry.sgv !== "number" || entry.sgv <= 0) return false;
 
-  // sgv (sensor glucose value) deve essere un numero positivo
-  if (typeof entry.sgv !== 'number' || entry.sgv <= 0) return false;
+  const hasDate = typeof entry.date === "number" && entry.date > 0;
+  const hasDateString = typeof entry.dateString === "string";
 
-  // Deve avere un timestamp (date in ms oppure dateString ISO)
-  const hasDate = typeof entry.date === 'number' && entry.date > 0;
-  const hasDateString = typeof entry.dateString === 'string' && entry.dateString.length > 0;
-  if (!hasDate && !hasDateString) return false;
-
-  return true;
+  return hasDate || hasDateString;
 }
 
 module.exports = { syncNightscout };
